@@ -652,6 +652,7 @@ class AccountManager(BaseConsoleInterface):
         self._mfa_manager = None
         self._iam_access = None
         self._account_id = None
+        self._support_level = None
 
     def terminate_account(self):
         """Terminates the account matching the info provided.
@@ -709,6 +710,66 @@ class AccountManager(BaseConsoleInterface):
         if success:
             self.email = new_account_email
         return success
+
+    def update_support_level(self, support_level):
+        """Updates the support level of an account to the new one provided
+
+        Args:
+            support_level (str): The new support level.
+
+        Returns:
+            True on success.
+
+        Raises:
+            ServerError, UnableToUpdateAccount: On Failure with the corresponding message from the backend service.
+
+        """
+        _urls = Urls('us-east-1')
+        update_support_url = f'{_urls.support_plans_url}/service/updateSupportLevel'
+        payload = {'supportLevel': support_level}
+
+        session = self._get_billing_session(self.email,
+                                            self.password,
+                                            self.region,
+                                            unfiltered_session=True,
+                                            mfa_serial=self.mfa_serial)
+        response = session.get(f'{_urls.support_plans_url}/home')
+        if not response.ok:
+            ServerError(f'Unsuccessful response received: {response.text} '
+                        f'with status code: {response.status_code}')
+
+        response = session.post(update_support_url, data=payload)
+        if not response.ok:
+            UnableToUpdateAccount(response.text)
+        return bool(response.ok)
+
+    @property
+    def support_level(self):
+        if self._support_level is None:
+            _urls = Urls('us-east-1')
+            describe_support_url = f'{_urls.support_plans_url}/service/describeSupportLevelSummary'
+            parameters = {'hashArgs': '#a', 'region': 'us-east-1'}
+            payload = {'lang': 'en'}
+
+            session = self._get_iam_session(self.email,
+                                                self.password,
+                                                self.region,
+                                                mfa_serial=self.mfa_serial)
+            print (f'{_urls.support_plans_url}/home')
+            self.logger.debug(f'Trying to get url: {_urls.support_plans_url}/home with parameters :{parameters}')
+            response = session.get(f'{_urls.support_plans_url}/home', params=parameters)
+            print (response.text)
+            if not response.ok:
+                ServerError(f'Unsuccessful response received: {response.text} '
+                            f'with status code: {response.status_code}')
+
+            response = session.post(describe_support_url, data=payload)
+            if not response.ok:
+                ServerError(response.text)
+            print (response.text)
+            self._support_level = response.json().get('supportLevel')
+
+        return self._support_level
 
     def _update_account(self, payload):
         update_url = f'{self._update_url}?redirect_uri={Urls.billing_home}#/account'

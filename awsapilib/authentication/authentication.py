@@ -119,6 +119,7 @@ class Urls:
     iam_home: str = f'{scheme}console.{root_domain}/iam/home'
     iam_api: str = f'{scheme}console.{root_domain}/iam/api'
     federation: str = f'{sign_in}/federation'
+    support: str = f'{console}/support'
 
     @property
     def regional_console(self):
@@ -189,6 +190,16 @@ class Urls:
 
         """
         return f'{self.scheme}us-east-1.console.{self.root_domain}/iam/home'
+    
+    @property
+    def support_plans_url(self):
+        """The url of the service plans for Support Level.
+
+        Returns:
+            support_plans_urls (str): The url of the service plans for Support Level.
+
+        """
+        return f'{self.support}/plans'
 
 
 class LoggerMixin:  # pylint: disable=too-few-public-methods
